@@ -7,3 +7,9 @@ lp.txt
 # Result of lp_solve
 result.out
 
+# Latex files
+**.aux
+**.fdb_latexmk
+**.fls
+**.log
+**.synctex.gz

@@ -12,7 +12,94 @@
 \begin{document}
 \maketitle
 
-\section*{TODO}
+
+
+\section*{Abstract}
+
+
+
+\section{Introduction}
+\paragraph*{}
+In classic covering problems (vertex cover, independent set, etc.) each vertex of a graph is either included in \textit{the set} or not, which can also be expressed as giving each vertex a value of $1$ or $0$, respectively. Then, problem requirements are set as some inequalities with those vertices' values. Ex. in vertex cover we require that for each edge, sum of it's endpoints' values sum up to at least $1$.
+
+In fractional coverings we use a less strict requirement, namely that each value is a real number in range $[0, 1]$. Ex. in vertex cover, as above, for each edge $(u, v)$, $|u| + |v| \ge 1$. Obviously, every \textit{normal} covering is also a fractional covering. 
+
+In this paper we only consider tree covering problems: vertex cover (VC) and independent set (IS). In both scenarios, optimal fractional solutions are the same as \textit{classic} ones (simple proof left as an exercise for the reader, not true for all graphs).
+
+We define \textit{score} of a covering as the \textit{sum of all vertices in the current covering} divided by the \textit{sum of all vertices in on optimal covering}. In VC scores are $\ge 1$ and in IS they are $\le 1$. In both problems, for a given solution (covering), the closer the score is to $1$ (to optimal solution), the \textit{better} that solution is.
+
+In \textit{on-line} covering problem we imagine two players: algorithm and adversary. The former changes values in vertices to meet problem requirements while also keeping the score as good as possible. The latter builds the graph by adding one edge at a time, trying to make the solution worse.
+
+To make the problem more interesting, we require that all changes made by the algorithm have the same monotonicity, ie.:
+\begin{itemize}
+    \item in VC values start at $0$ and can only be \textbf{increased}, up to $1$,
+    \item in IS values start at $1$ and can only be \textbf{decreased}, down to $0$.
+\end{itemize}
+
+
+
+\section{Linear programming solutions}
+\paragraph*{}
+We focus on VC formulation [with IS versions in square brackets]. $v_i^{(t)}$ stands for value of vertex $i$ after $t$-th move (adding $t$ edges to the tree).
+
+In this scenario we play as the adversary and we try to maximise [minimise] the score achieved by \textbf{any} algorithm.
+
+We start with a list of edges (of length $T$) we want to add in each turn and try to encode that as an input to some linear programming solver. Keep in mind that even though the algorithm (here: lp solver) knows the whole tree (and all tricks used) in advance, it still has to assert that the covering is correct after each turn.
+
+
+\subsection{Formulation}
+\paragraph{General}
+List of things we put into our linear programming problem (for a given list of edges):
+\begin{enumerate}
+    \item Declare score, which we want (the algorithm) to minimise [maximise].
+    \item Define limits on all values. For all vertices $i$, $v_i^{(0)} \ge 0$ and $v_i^{(T)} \le 1$ [$v_i^{(0)} \le 1$ and $v_i^{(T)} \ge 0$].
+    \item Force monotonicity of all values. For each vertex $i$ and each turn $t$ (from $1$ to $T$) $v_i^{(t-1)} \le v_i^{(t)}$ [$v_i^{(t-1)} \ge v_i^{(t)}$].
+    \item Add edges. When we want to connect vertices $i$ and $j$ in turn $t$, we write $v_i^{(t)} + v_j^{(t)} \ge 1$ [$v_i^{(t)} + v_j^{(t)} \le 1$].
+    \item Compare with optimal. After each turn $t$ we add $\sum_{i} v_i^{(t)} \le Opt^{(t)} * score$ [$\sum_{i} v_i^{(t)} \ge Opt^{(t)} * score$], where $Opt^{(t)}$ stands for the sum of vertex values in the optimal solution.
+\end{enumerate}
+
+
+\paragraph{Symmetry Breaking}
+In a \textit{casual game} it is alway beneficial for the adversary to add the second edge in each connected component to the vertex with lower [higher] value, because it forces the algorithm to increase the total sum by more (for edge with values $a \le b$, connecting the third vertex to the first one results in the grand total of $1 + b$, which is greater or equal to $1 + a$, which we get by doing the other move).
+
+Therefore, when we see a second edge $(v_a, v_c)$ is begin added to a connected component $\left\{ v_a, v_b\right\}$ (at time $t$), we write that $v_a^{(t)} \le v_b^{(t)}$ [$v_a^{(t)} \le v_b^{(t)}$]. We call that \textit{Symmetry Breaking} (or \textit{SB}, \textit{BS}).
+
+
+\paragraph{Branching}
+We allow ourselves to consider and encode multiple ways of building the tree. More precisely, at turn $t$ we add some edge in branch $p$ and another one in branch $q$. Keep in mind that branches cannot be merged.
+
+One can think of them as an option for the adversary to change tactic depending on the state of the tree. Or just an another possibility the algorithm needs to account for when assigning values.
+
+To denote multiple branches we can use $v_i^{(t, b)}$ where $b$ is the number of branch that vertex belongs to (in turn $t$). Multiple branches can come from the same state, but they are completely independent, so we can encode on them one by one, using just their indexes $b$.
+
+As in step $3.$, we need to assert monotonicity of values. If branch $q$ forks from branch $p$ at turn $t$, we write $v_i^{(t-1, p)} \le v_i^{(t, q)}$ [$\ge$] for each vertex $i$.
+
+Also, we need to terminate every branch, so we again write $v_i^{(T_b, b)} \le 1$ [... $\ge 0$] for each vertex, where $T_b$ is the last turn in branch $b$.
+
+It's worth noting, that a complete solution would consider all possible branches. But our goal here is to achieve the best possible score with a reasonable amount of computation.
+
+
+\paragraph{Attacks}
+An attack on vertex $v$ is a way to force a value of $1$ in this vertex [not practical in IS]. We do that by connecting \textit{a lot} of edges to that vertex.
+
+We always attack multiple vertices at once. More precisely, after each turn, for every correct \textit{normal} vertex cover $S$ of the tree, we attack all of the vertices in $S$.
+
+We encode that similarly to step $5.4$. Namely, we write $|S| + \sum_{v_i \not \in S} \ v_i^{(t)} \le |S| * score$.
+
+
+\subsection{Results}
+After excessive testing we found that a good strategy, both in terms of score and computation time, is a line (vertex degree at most $2$).
+
+We start with one edge. We say it has a left and right end. Next, we add an edge on the right, breaking the symmetry. Later, we add one edge on the right, one on the left. One on the left and one on the right. And so on.
+
+We do not use branching. The only attack used is for the optimal covering after an even number of turns (odd number of vertices).
+
+With such means we achieved a score of over $1.69$.
+
+
+
+\section{Vertex Cover lower bound}
+\paragraph{General}
 Only important inequalities are those representing optimal vertex covers when the path is of odd length.
 % ... a_1' - a_0' - x - y - z - a_0 - a_1 ...
 % start with (x, y), x>=y, then (y, z) and later  (z, a_0), (x, a_0'),  (a_0', a_1'), (a_0, a_1)
@@ -36,13 +123,13 @@ Y + 2 \cdot (1 - a_1) + 2 \cdot a_2 = 4 \cdot \alpha
 2 \cdot (1 - a_0) + 2 \cdot (1 - a_2) + 2 \cdot a_3 = 5 \cdot \alpha
 \]
 
-\section*{Assumptions}
+\paragraph{Assumptions}
 \begin{itemize}
     \item Every important inequality is treated as equality to make the example easy to solve.
     \item Symmetry breaking: second edge is connected to the vertex with smaller value (or arbitrarly if $x=y$).
 \end{itemize}
 
-\section*{Solution}
+\paragraph{Calculations}
 First let's assume the optimal start of $x = y = \frac{1}{2}$. 
 \newline
 Next we need $Y + z = 1$ and $x + z = \alpha$. Therefore $z = \alpha-\frac{1}{2}$ and $y = \frac{3}{2} - \alpha$.
@@ -142,5 +229,7 @@ a_i = \frac{1}{4} \left( F_{i+6} - \phi \cdot F_{i+5} + 2 \cdot \phi - 2 \right)
 \]
 
 
+
+\section{Independent Set bounds}
 
 \end{document}
