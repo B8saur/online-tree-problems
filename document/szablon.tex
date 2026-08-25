@@ -4,9 +4,10 @@
 \usepackage{geometry}
 \usepackage{amsmath}
 \usepackage{amssymb}
+\usepackage{xcolor}
 \geometry{margin=1in}
-% \title{Fractional vertex cover on-line on trees}
-\title{\textbf{DRAFT}  Fractional covering problems on-line on trees}
+% \title{Fractional Vertex Cover Online on Trees}
+\title{\textbf{DRAFT} Fractional Vertex Cover Online on Trees}
 \author{Bartosz Bromblik}
 \date{}
 \begin{document}
@@ -19,217 +20,332 @@
 
 
 \section{Introduction}
-\paragraph*{}
-In classic covering problems (vertex cover, independent set, etc.) each vertex of a graph is either included in \textit{the set} or not, which can also be expressed as giving each vertex a value of $1$ or $0$, respectively. Then, problem requirements are set as some inequalities with those vertices' values. Ex. in vertex cover we require that for each edge, sum of it's endpoints' values sum up to at least $1$.
+In classic vertex cover problem each vertex of the graph is either included in \textit{the set} or not, which can also be expressed as giving each vertex a \textit{value} of $1$ or $0$, respectively. Then, problem requirements are set as $|v| + |u| \ge 1$ for each edge $(u, v)$. In fractional covering we use a less strict requirement, namely that each value is a real number in range $[0, 1]$. Inequalities are stated alike.
 
-In fractional coverings we use a less strict requirement, namely that each value is a real number in range $[0, 1]$. Ex. in vertex cover, as above, for each edge $(u, v)$, $|u| + |v| \ge 1$. Obviously, every \textit{normal} covering is also a fractional covering. 
+We define \textit{score} of a fractional covering as the \textit{sum of values of all vertices in the current covering} divided by the \textit{sum of values all vertices in on optimal covering}. Optimal fractional vertex cover on trees can be found in the same way as the classic one (correctness proof is also the same). Score, defined as such, is always $\ge 1$. A score is \textit{better} if it's smaller (closer to optimal). A covering is \textit{better} if it has a better score.
 
-In this paper we only consider tree covering problems: vertex cover (VC) and independent set (IS). In both scenarios, optimal fractional solutions are the same as \textit{classic} ones (simple proof left as an exercise for the reader, not true for all graphs).
+We imagine \textit{online} covering problem as a turn-based game of two players: algorithm and adversary. The former changes values in vertices to meet problem requirements while also keeping the score as good as possible. The latter builds the graph by adding one edge at a time, trying to make the solution (covering) worse.
 
-We define \textit{score} of a covering as the \textit{sum of all vertices in the current covering} divided by the \textit{sum of all vertices in on optimal covering}. In VC scores are $\ge 1$ and in IS they are $\le 1$. In both problems, for a given solution (covering), the closer the score is to $1$ (to optimal solution), the \textit{better} that solution is.
-
-In \textit{on-line} covering problem we imagine two players: algorithm and adversary. The former changes values in vertices to meet problem requirements while also keeping the score as good as possible. The latter builds the graph by adding one edge at a time, trying to make the solution worse.
-
-To make the problem more interesting, we require that all changes made by the algorithm have the same monotonicity, ie.:
-\begin{itemize}
-    \item in VC values start at $0$ and can only be \textbf{increased}, up to $1$,
-    \item in IS values start at $1$ and can only be \textbf{decreased}, down to $0$.
-\end{itemize}
+If the algorithm can arbitrarly change values of vertices, it can always achieve a score of $1$. But if we require monotonicity, ie. values never get decreased, the whole score minimalisation problem becomes interesting.
 
 
 
-\section{Linear programming solutions}
-\paragraph*{}
-We focus on VC formulation [with IS versions in square brackets]. $v_i^{(t)}$ stands for value of vertex $i$ after $t$-th move (adding $t$ edges to the tree).
+\section{Linear programming}
+In this scenario we play as the adversary and we try to maximise the score achieved by \textbf{any} algorithm on the given input.
 
-In this scenario we play as the adversary and we try to maximise [minimise] the score achieved by \textbf{any} algorithm.
-
-We start with a list of edges (of length $T$) we want to add in each turn and try to encode that as an input to some linear programming solver. Keep in mind that even though the algorithm (here: lp solver) knows the whole tree (and all tricks used) in advance, it still has to assert that the covering is correct after each turn.
+We start with a list of edges (of length $T$) we want to add in each turn and try to encode that as an input to some linear programming solver. Keep in mind that even though the algorithm knows the whole tree (and all tricks used) in advance, it still has to assert that all requirements are met after each turn.
 
 
 \subsection{Formulation}
 \paragraph{General}
-List of things we put into our linear programming problem (for a given list of edges):
+Let $v_i^{(t)}$ stand for the value of $i$-th vertex after $t$-th turn. List of things we put into our linear programming problem (for a given list of edges):
 \begin{enumerate}
-    \item Declare score, which we want (the algorithm) to minimise [maximise].
-    \item Define limits on all values. For all vertices $i$, $v_i^{(0)} \ge 0$ and $v_i^{(T)} \le 1$ [$v_i^{(0)} \le 1$ and $v_i^{(T)} \ge 0$].
-    \item Force monotonicity of all values. For each vertex $i$ and each turn $t$ (from $1$ to $T$) $v_i^{(t-1)} \le v_i^{(t)}$ [$v_i^{(t-1)} \ge v_i^{(t)}$].
-    \item Add edges. When we want to connect vertices $i$ and $j$ in turn $t$, we write $v_i^{(t)} + v_j^{(t)} \ge 1$ [$v_i^{(t)} + v_j^{(t)} \le 1$].
-    \item Compare with optimal. After each turn $t$ we add $\sum_{i} v_i^{(t)} \le Opt^{(t)} * score$ [$\sum_{i} v_i^{(t)} \ge Opt^{(t)} * score$], where $Opt^{(t)}$ stands for the sum of vertex values in the optimal solution.
+    \item Declare \textit{score}, which we want (the algorithm) to minimise.
+    \item Define limits on all values. For all vertices $i$, $v_i^{(0)} \ge 0$ and $v_i^{(T)} \le 1$.
+    \item Force monotonicity of all values. For each vertex $i$ and each turn $t$ (from $1$ to $T$) $v_i^{(t-1)} \le v_i^{(t)}$.
+    \item Add edges. When we want to connect vertices $i$ and $j$ in turn $t$, we write $v_i^{(t)} + v_j^{(t)} \ge 1$.
+    \item Compare with optimal. After each turn $t$ we add $\sum_{i} v_i^{(t)} \le Opt^{(t)} \cdot \textit{score}$, where $Opt^{(t)}$ stands for the sum of values of all vertices in the optimal covering.
 \end{enumerate}
 
 
 \paragraph{Symmetry Breaking}
-In a \textit{casual game} it is alway beneficial for the adversary to add the second edge in each connected component to the vertex with lower [higher] value, because it forces the algorithm to increase the total sum by more (for edge with values $a \le b$, connecting the third vertex to the first one results in the grand total of $1 + b$, which is greater or equal to $1 + a$, which we get by doing the other move).
+It is alway beneficial for the adversary to add the second edge in each connected component to the vertex with lower value, because it forces the algorithm to increase the total sum by more (for edge with values $a \le b$, connecting the third vertex to the first one results in the grand total of $1 + b$, which is greater or equal to $1 + a$, which we get by doing the other move).
 
-Therefore, when we see a second edge $(v_a, v_c)$ is begin added to a connected component $\left\{ v_a, v_b\right\}$ (at time $t$), we write that $v_a^{(t)} \le v_b^{(t)}$ [$v_a^{(t)} \le v_b^{(t)}$]. We call that \textit{Symmetry Breaking} (or \textit{SB}, \textit{BS}).
+Therefore, when we see a second edge $(v_a, v_c)$ begin added to a connected component $\left\{ v_a, v_b\right\}$ (at time $t$), we write that $v_a^{(t)} \le v_b^{(t)}$. We call that \textit{Symmetry Breaking}, abbreviated as \textit{SB}.
 
 
 \paragraph{Branching}
 We allow ourselves to consider and encode multiple ways of building the tree. More precisely, at turn $t$ we add some edge in branch $p$ and another one in branch $q$. Keep in mind that branches cannot be merged.
 
-One can think of them as an option for the adversary to change tactic depending on the state of the tree. Or just an another possibility the algorithm needs to account for when assigning values.
+One can think of them as an option for the adversary to change the tactic depending on the state of the tree. Or just an another possibility the algorithm needs to account for when assigning values.
 
-To denote multiple branches we can use $v_i^{(t, b)}$ where $b$ is the number of branch that vertex belongs to (in turn $t$). Multiple branches can come from the same state, but they are completely independent, so we can encode on them one by one, using just their indexes $b$.
+To denote multiple branches we can use $v_i^{(t, b)}$ where $b$ is the index of branch that vertex belongs to (in turn $t$). Multiple branches can come from the same state, but they are completely independent, so we can encode on them one by one, using just their indexes $b$.
 
-As in step $3.$, we need to assert monotonicity of values. If branch $q$ forks from branch $p$ at turn $t$, we write $v_i^{(t-1, p)} \le v_i^{(t, q)}$ [$\ge$] for each vertex $i$.
+As in step $3.$, we need to assert monotonicity of values. If branch $q$ forks from branch $p$ at turn $t$, we write $v_i^{(t-1, p)} \le v_i^{(t, q)}$ for each vertex $i$.
 
-Also, we need to terminate every branch, so we again write $v_i^{(T_b, b)} \le 1$ [... $\ge 0$] for each vertex, where $T_b$ is the last turn in branch $b$.
+Also, we need to terminate every branch, similarly to step $2.$, so we write $v_i^{(T_b, b)} \le 1$ for each vertex, where $T_b$ is the last turn in branch $b$.
 
-It's worth noting, that a complete solution would consider all possible branches. But our goal here is to achieve the best possible score with a reasonable amount of computation.
+It's worth noting, that a complete solution would consider all possible branches at all turns, but this causes an exponential growth of the size of the linear programming problem. Our goal here is to achieve the highest possible score with an affordable amount of computation.
 
 
 \paragraph{Attacks}
-An attack on vertex $v$ is a way to force a value of $1$ in this vertex [not practical in IS]. We do that by connecting \textit{a lot} of edges to that vertex.
+An attack on vertex $v$ is a way to force a value of $1$ in this vertex. It is achieved by connecting an extra node $v'$ to $v$ with an edge, so that $|v| + |v'| \ge 1$.
 
-We always attack multiple vertices at once. More precisely, after each turn, for every correct \textit{normal} vertex cover $S$ of the tree, we attack all of the vertices in $S$.
+We usually attack multiple vertices at once. More precisely, for a correct \textit{normal} vertex cover $S$ of the current tree, we attack all of the vertices in $S$. We encode that similarly to step $5.$, namely $|S| + \sum_{v_i \not \in S} \ v_i^{(t)} \le |S| \cdot score$. This may be done for all $S$, after each turn.
 
-We encode that similarly to step $5.4$. Namely, we write $|S| + \sum_{v_i \not \in S} \ v_i^{(t)} \le |S| * score$.
+This approach can be further simplified to only using correct coverings that are inlcusion-wise minimal. For $S$ and $S'$, $S \subset S'$, $S' \setminus S = {v_s}$, if $|S| + \sum_{v_i \not \in S} \ v_i^{(t)} = A \le |S| \cdot score$, then also $A - v_s^{(t)} + 1 \le A + 1 \le |S| \cdot score + 1 \le |S| \cdot score + score = |S'| \cdot score$. Therefore adding an inequality (step $5.$) for any $|S'|$ will not change the \textit{score}. Moreover, not all inlcusion-wise minimal $|S|$ are guaranteed to affect the score, and one can choose to omit them.
+
+Attacks can be concider as a simplified version of branching.
 
 
 \subsection{Results}
-After excessive testing we found that a good strategy, both in terms of score and computation time, is a line (vertex degree at most $2$).
+During testing we found that a good adversary strategy, both in terms of score and computation time, is a line made in a very specific order.
 
-We start with one edge. We say it has a left and right end. Next, we add an edge on the right, breaking the symmetry. Later, we add one edge on the right, one on the left. One on the left and one on the right. And so on.
+Start with one edge. We say it has a left and right end. Next, add an edge on the right, breaking the symmetry. Later, add one edge on the right, one on the left. The, one on the left and one on the right. And so on.
 
-We do not use branching. The only attack used is for the optimal covering after an even number of turns (odd number of vertices).
+We do not use branching. The only attacks used are for the optimal coverings - when no two connected vertices are in the set.
 
-With such means we achieved a score of over $1.69$.
+With such means we achieved a score of over \textbf{1.69}, using 23 edges (as described above).
 
-\section*{\textbf{CUTOFF POINT - NOT EDITED, PARTS WRITTEN SEPARATELY}}
+Key observations:
+\begin{enumerate}
+    \item Value of each vertex gets changed at most twice - once for each edge attached to it. These are the only two moments when a new requirement using the value of that vertex is added. Extra changes could not help.
+    \item After the first turn, both vertices get assigned the same value of $\frac{1}{2}$.
+\end{enumerate}
+
+We chose to investigate and solve the linear programming problem by hand, as the number of edges goes to infinity, which we describe in the next section.
+
+
 
 \section{Vertex Cover lower bound}
-\paragraph{General}
-Only important inequalities are those representing optimal vertex covers when the path is of odd length.
-% ... a_1' - a_0' - x - y - z - a_0 - a_1 ...
-% start with (x, y), x>=y, then (y, z) and later  (z, a_0), (x, a_0'),  (a_0', a_1'), (a_0, a_1)
-\newline
-First important inequalities are:
-\[
-x + z = \alpha
-\]
-\[
-Y + 2 \cdot a_0 = 2 \cdot \alpha
-\]
-\[
-X + Z + 2 \cdot a_1 = 3 \cdot \alpha 
-\quad \equiv \quad
-2 \cdot (1 - a_0) + 2 \cdot a_1 = 3 \cdot \alpha
-\]
-\[
-Y + 2 \cdot (1 - a_1) + 2 \cdot a_2 = 4 \cdot \alpha
-\]
-\[
-2 \cdot (1 - a_0) + 2 \cdot (1 - a_2) + 2 \cdot a_3 = 5 \cdot \alpha
-\]
+\paragraph{Description}
+Instead of focusing on the \textit{score} as in $|S| + \sum_{v_i \not \in S} \ v_i^{(t)} \le |S| \cdot score$, we use $\alpha = score - 1$. Then we ask about $\sum_{v_i \not \in S} \ v_i^{(t)} \le |S| \cdot \alpha$.
 
-\paragraph{Assumptions}
+We will only consider inequalities (as in 2.2) after even number of turns, which is a less strict requirement, but sufficient for our analysis.
+
+For the first three vertices $v_0$, $v_1$ and $v_2$ with edges $(v_0, v_1)$ in turn $1$ and $(v_1, v_2)$ in turn $2$ we assign variables:
 \begin{itemize}
-    \item Every important inequality is treated as equality to make the example easy to solve.
-    \item Symmetry breaking: second edge is connected to the vertex with smaller value (or arbitrarly if $x=y$).
+    \item $x := |v_0^{(1)}|$
+    \item $y := |v_1^{(1)}|$, $Y := |v_1^{(2)}|$
+    \item $z := |v_2^{(2)}|$
 \end{itemize}
 
-\paragraph{Calculations}
-First let's assume the optimal start of $x = y = \frac{1}{2}$. 
-\newline
-Next we need $Y + z = 1$ and $x + z = \alpha$. Therefore $z = \alpha-\frac{1}{2}$ and $y = \frac{3}{2} - \alpha$.
-\newline
-Next we have $2 \cdot a_0 + Y = 2 \cdot \alpha$, from which we get $a_0 = \frac{3}{2} \alpha - \frac{3}{4}$, and $X = Z = 1 - a_0 = \frac{7}{4} - \frac{3}{2} \alpha$.
-\newline
-Next $2 \cdot (1 - a_0) + 2 \cdot a_1 = 3 \cdot \alpha$, therefore $a_1 = 3 \cdot \alpha - \frac{7}{4}$.
-\newline\newline
-Further, we notice a pattern that every $i$th and $i+2$th equations look like:
+Notice that we use lowercase for the vertices with one edge and uppercase for the vertices with two edges.
+
+After the first two edges, all vertices are added in \textit{pairs} - one vertex on one end, one vertex on the other end, and only then do we add an inequality. Therefore, we name their values symmetrically: $a_i^L$ for the left one and $a_i^R$ for the right one. $i$ is the index of that pair. $a_i^L$, $a_i^R$ denote value after adding one edge to the vertex and $A_i^L$, $A_i^R$ after adding the second edge, respectively.
+
+
+\subsection{Calculations}
+\paragraph{Base}
+There are two kinds of inequalities, for \colorbox{lime}{edges} and for \colorbox{cyan}{vertex coverings}. The former are marked \colorbox{lime}{green} and the latter in \colorbox{cyan}{blue}.
+\begin{itemize}
+    \item First we have \colorbox{lime}{$x + y \ge 1$}, and from Symmetry Breaking we get $x \ge y$. Therefore $x \ge \frac{1}{2}$.
+    \item From \colorbox{cyan}{$x + z \le \alpha$} and \colorbox{lime}{$Y + z \ge 1$} we get $z \le \alpha - \frac{1}{2}$ and $Y \ge \frac{3}{2} - \alpha$.
+    \item Next we have \colorbox{lime}{$Z + a_0^R \ge 1$}, \colorbox{lime}{$X + a_0^L \ge 1$}, and \colorbox{cyan}{$a_0^L + Y + a_0^R \le 2 \cdot \alpha$}.
+\end{itemize}
+
+Let $a_i = \frac{1}{2} \cdot (a_i^L + a_i^R)$, as there is really no difference between those two. Alike, $A_i = \frac{1}{2} \cdot (A_i^L + A_i^R)$.
+
+\begin{itemize}
+    \item With new notation we get $Y + 2 \cdot a_0 \le 2 \cdot \alpha$. Therefore $a_0 \le 
+    \frac{3}{2} \cdot \alpha - \frac{3}{4}$.
+    \item Adding inequalities together we get $X + Z + 2 \cdot a_0 \ge 2$, so $X + Z \ge \frac{7}{2} - 3 \cdot \alpha$.
+    \item From \colorbox{cyan}{$a_1^L + X + Z + a_1^R = X + Z + 2 \cdot a_1 \le 3 \cdot \alpha$} we conclude $a_1 \le 3 \cdot \alpha - \frac{7}{4}$
+\end{itemize}
+
+
+\paragraph{Recursion}
+Notice that in \colorbox{cyan}{blue inequalities} there are always two variables written in lowercase - values of vertices at the ends of the line, and \textit{some} other variables. To simplify, we name their sum $S_i$. So we have:
+\begin{itemize}
+    \item \colorbox{cyan}{$2 \cdot a_0 + S_0 \le 2 \cdot \alpha$}, where $S_0 = Y \ge \frac{3}{2} - \alpha$
+    \item \colorbox{cyan}{$2 \cdot a_1 + S_1 \le 3 \cdot \alpha$}, where $S_1 = X + Z \ge \frac{7}{2} - 3 \cdot \alpha$
+    \item \colorbox{cyan}{$2 \cdot a_2 + S_2 \le 4 \cdot \alpha$}, where $S_2 = 2 \cdot A_0 + Y = 2 \cdot A_0 + S_0 \ge 7 - 7 \cdot \alpha$
+    \item \colorbox{cyan}{$2 \cdot a_3 + S_3 \le 5 \cdot \alpha$}, where $S_3 = 2 \cdot A_1 + X + Z = 2 \cdot A_1 + S_1$
+\end{itemize}
+
+We can clearly see two patterns: $2 \cdot a_i + S_i \le (i+2) \cdot \alpha$ and $S_{i+2} = S_{i} + 2 \cdot A_{i}$. Because \colorbox{lime}{$a_{i+1}^L + A_i^L \ge 1$} and \colorbox{lime}{$a_{i+1}^R + A_i^R \ge 1$} we have $2 \cdot A_i \ge 2 - 2 \cdot a_{i+1}$. So $S_{i+2} \ge S_i + 2 - 2 \cdot a_{i+1}$. Using $2 \cdot a_{i+1} + S_{i+1} \le (i+3) \cdot \alpha$ we can further simplify it to:
 \[
-(sth) + 2 \cdot a_k = (k+2) \cdot \alpha
+S_{i+2} \ge S_{i+1} + S_i + 2 - (i+3) \cdot \alpha
+\]
+
+
+\paragraph{Induction}
+For given $S_1$ and $S_2$ we can solve that recurrence relation and get:
+\[
+S_i \ge F_{i-2} \cdot S_1 + F_{i-1} \cdot S_2 + 2 \cdot (F_i - 1) - (F_{i+2} + 3 \cdot F_i - i - 4) \cdot \alpha
+\quad\quad\quad
+\text{for } i \ge 2
+\]
+
+$F_i$ stands for the fibonacci sequence, where $F_0 = 0$, $F_1 = 1$ and $F_{i+2} = F_{i+1} + F_i$ for $i \ge 0$.
+
+We can check by hand that the above is true for $S_2$ and $S_3$. For $i \ge 4$:
+\[
+S_i \ge S_{i-1} + S_{i-2} + 2 - (i+1) \cdot \alpha
+\]
+
+\[
+\ge \left(F_{i-3} \cdot S_1 + F_{i-2} \cdot S_2 + 2 \cdot (F_{i-1} - 1) - (F_{i+1} + 3 \cdot F_{i-1} - i - 3) \cdot \alpha\right)
 \]
 \[
-(sth) + 2 \cdot (1 - a_{k+1}) + 2 \cdot a_{k+2} = (k+4) \cdot \alpha
++ \left(F_{i-4} \cdot S_1 + F_{i-3} \cdot S_2 + 2 \cdot (F_{i-2} - 1) - (F_i + 3 \cdot F_{i-2} - i - 2) \cdot \alpha\right)
++ 2 - (i+1) \cdot \alpha
 \]
-We subtract the former from the latter and we get:
+
 \[
-a_{k+2} + 1 - a_{k+1} - a_k = \alpha 
-\quad\quad \Rightarrow \quad\quad
-a_{k+2} = a_{k+1} + a_k + (\alpha - 1)
-\]
-Calculating first few terms to notice the pattern:
-\[
-a_0 = 1 \cdot (a_0) + 0 \cdot (a_1) + 0 \cdot (\alpha - 1)
+= (F_{i-3} + F_{i-4}) \cdot S_1 + (F_{i-2} + F_{i-3}) \cdot S_2 + 2 \cdot (F_{i-1} - 1 + F_{i-2} - 1 + 1)
 \]
 \[
-a_1 = 0 \cdot (a_0) + 1 \cdot (a_1) + 0 \cdot (\alpha - 1)
+- \alpha \cdot \left(F_{i+1} + F_i + 3 \cdot F_{i-1} + 3 \cdot F_{i-2} - i - 3 - i - 2 + i + 1\right)
+\]
+
+\[
+= F_{i-2} \cdot S_1 + F_{i-1} \cdot S_2 + 2 \cdot (F_i - 1) - (F_{i+2} + 3 \cdot F_i - i - 4) \cdot \alpha
+\]
+
+Therefore the inequality holds for all $i \ge 2$.
+
+
+\paragraph{Solution}
+We can substitute $S_1 \ge \frac{7}{2} - 3 \cdot \alpha$ and $S_2 \ge 7 - 7 \cdot \alpha$ and get:
+\[
+S_i \ge F_{i-2} \cdot \frac{7}{2} - F_{i-2} \cdot 3 \cdot \alpha + F_{i-1} \cdot 7 - F_{i-1} \cdot 7 \cdot \alpha + 2 \cdot (F_i - 1) - (F_{i+2} + 3 \cdot F_i - i - 4) \cdot \alpha
+\]
+
+\[
+= \left(\frac{7}{2} \cdot F_{i-2} + 7 \cdot F_{i-1} + 2 \cdot F_i - 2\right)
+- \alpha \left(3 \cdot F_{i-2} + 7 \cdot F_{i-1} + 3 \cdot F_i + F_{i+2} - i - 4\right)
+\]
+
+\[
+= \left(\frac{7}{2} \cdot F_{i-1} + \frac{11}{2} \cdot F_i - 2\right)
+- \alpha \left(4 \cdot F_{i-1} + 6 \cdot F_i + F_{i+2} - i - 4\right)
+\]
+
+\[
+= \left(2 \cdot F_i + \frac{7}{2} \cdot F_{i+1} - 2\right)
+- \alpha \left(2 \cdot F_i + 4 \cdot F_{i+1} + F_{i+2} - i - 4\right)
+\]
+
+\[
+= \left(\frac{3}{2} \cdot F_{i+1} + 2 F_{i+2} - 2\right)
+- \alpha \left(2 \cdot F_{i+1} + 3 \cdot F_{i+2} - i - 4\right)
+\]
+
+Because $2 \cdot a_i + S_i \le (i+2) \cdot \alpha$, $a_i \le \frac{1}{2} \cdot ((i+2) \cdot \alpha - S_i)$:
+\[
+a_i \le \frac{1}{2}\left((i+2) \cdot \alpha + \alpha \left(2 \cdot F_{i+1} + 3 \cdot F_{i+2} - i - 4\right) - \left(\frac{3}{2} \cdot F_{i+1} + 2 \cdot F_{i+2} - 2\right)\right)
 \]
 \[
-a_2 = 1 \cdot (a_0) + 1 \cdot (a_1) + 1 \cdot (\alpha - 1)
+= \frac{1}{4}\left(\alpha \cdot \left(4 \cdot F_{i+1} + 6 \cdot F_{i+2} - 4\right) - \left(3 \cdot F_{i+1} + 4 \cdot F_{i+2} - 4\right)\right)
+\]
+
+
+\paragraph{Bound}
+As we required above, each variable has to be in range $[0, 1]$, including all $a_i^L$ and $a_i^R$. If $a_i^L \ge 0$ and $a_i^R \ge 0$, then also $a_i = \frac{1}{2} \cdot (a_i^L + a_i^R) \ge 0$.
+\[
+0 \le a_i \le \frac{1}{4}\left(\alpha \cdot \left(4 \cdot F_{i+1} + 6 \cdot F_{i+2} - 4\right) - \left(3 \cdot F_{i+1} + 4 \cdot F_{i+2} - 4\right)\right)
+\]
+
+\[
+\Longrightarrow \alpha \cdot \left(4 \cdot F_{i+1} + 6 \cdot F_{i+2} - 4\right) \ge \left(3 \cdot F_{i+1} + 4 \cdot F_{i+2} - 4\right)
+\]
+
+\[
+\Longrightarrow \alpha \ge \frac{3 \cdot F_{i+1} + 4 \cdot F_{i+2} - 4}{4 \cdot F_{i+1} + 6 \cdot F_{i+2} - 4}
+\]
+
+Now we calculate the limit of that fraction, knowing that $\underset{i \rightarrow \infty}{lim} \ \frac{F_{i+1}}{F_i} = \phi = \frac{1 + \sqrt{5}}{2}$:
+\[
+\underset{i \rightarrow \infty}{lim} \ \frac{3 \cdot F_{i+1} + 4 \cdot F_{i+2} - 4}{4 \cdot F_{i+1} + 6 \cdot F_{i+2} - 4}
+= \underset{i \rightarrow \infty}{lim} \ \frac{3 + 4 \cdot \frac{F_{i+2}}{F_{i+1}} - \frac{4}{F_{i+1}}}{4 + 6 \cdot \frac{F_{i+2}}{F_{i+1}} - \frac{4}{F_{i+1}}}
 \]
 \[
-a_3 = 1 \cdot (a_0) + 2 \cdot (a_1) + 2 \cdot (\alpha - 1)
-\]
-\[
-a_4 = 2 \cdot (a_0) + 3 \cdot (a_1) + 4 \cdot (\alpha - 1)
-\]
-\[
-a_5 = 3 \cdot (a_0) + 5 \cdot (a_1) + 7 \cdot (\alpha - 1)
-\]
-We can spot the Fibonacci series here, which we define as $F_0 = 0$, $F_1 = 1$, $F_{i+2} = F_{i+1} + F_i$. For $i \ge 1$:
-\[
-a_i = F_{i-1} \cdot a_0 + F_i \cdot a_1 + (F_{i+1} - 1) \cdot (\alpha - 1)
-\]
-Which is obvious if you thing about it.
-\newline\newline
-We can now substitute $a_0$ and $a_1$ with their respective values:
-\[
-a_i = F_{i-1} \cdot \left( \frac{3}{2} \alpha - \frac{3}{4} \right) + F_i \cdot \left( 3 \cdot \alpha - \frac{7}{4} \right) + \left( F_{i+1} - 1 \right) \cdot \left( \alpha - 1 \right)
-\]
-\[
-= \frac{1}{4} \left(
-    \alpha \cdot \left( 6 \cdot F_{i-1} + 12 \cdot F_i + 4 \cdot F_{i+1} - 4 \right)
-    - \left( 3 \cdot F_{i-1} + 7 \cdot F_i + 4 \cdot F_{i+1} - 4 \right)
-\right)
-\]
-\[
-= \frac{1}{4} \left(
-    \alpha \cdot \left( 6 \cdot F_i + 10 \cdot F_{i+1} - 4 \right)
-    - \left( 4 \cdot F_i + 7 \cdot F_{i+1} - 4 \right)
-\right)
-\]
-We assumed that $\forall_i \ a_i \ge 0$, so:
-\[
-a_i = 
-\frac{1}{4} \left(
-    \alpha \cdot \left( 6 \cdot F_i + 10 \cdot F_{i+1} - 4 \right)
-    - \left( 4 \cdot F_i + 7 \cdot F_{i+1} - 4 \right)
-\right) \ge 0
-\]
-Then:
-\[
-\alpha \ge \frac{4 \cdot F_i + 7 \cdot F_{i+1} - 4}{6 \cdot F_i + 10 \cdot F_{i+1} - 4}
-\]
-We now calculate the limit, knowing that $\underset{i \rightarrow \infty}{lim} \ \frac{F_{i+1}}{F_i} = \phi = \frac{1 + \sqrt{5}}{2}$:
-\[
-\underset{i \rightarrow \infty}{lim} \ \frac{4 \cdot F_i + 7 \cdot F_{i+1} - 4}{6 \cdot F_i + 10 \cdot F_{i+1} - 4}
-= \underset{i \rightarrow \infty}{lim} \ \frac{4 + 7 \cdot \frac{F_{i+1}}{F_i} - \frac{4}{F_i}}{6 + 10 \cdot \frac{F_{i+1}}{F_i} - \frac{4}{F_i}}
-= \frac{4 + 7 \cdot \phi}{6 + 10 \cdot \phi}
+= \frac{3 + 4 \cdot \phi}{4 + 6 \cdot \phi}
+= \frac{5 + 2 \cdot \sqrt{5}}{7 + 3 \cdot \sqrt{5}}
 = \frac{5 - \sqrt{5}}{4}
 = \frac{3 - \phi}{2}
 \]
-We again drop the inequality to get $\alpha = \frac{3 - \phi}{2}$. From this we calculate:
-\[
-a_0 = \frac{3}{2} \alpha - \frac{3}{4} = \frac{6 - 3 \cdot \phi}{4}
-\]
-\[
-a_1 = 3 \cdot \alpha - \frac{7}{4} = \frac{11 - 6 \cdot \phi}{4}
-\]
-We now substitute those to our general formula for $a_i$ and get:
-\[
-a_i = F_{i-1} \cdot \frac{6 - 3 \cdot \phi}{4} + F_i \cdot \frac{11 - 6 \cdot \phi}{4} + (F_{i+1} - 1) \cdot (\frac{3 - \phi}{2} - 1)
-\]
-...TODO...
-\[
-a_i = \frac{1}{4} \left( F_{i+6} - \phi \cdot F_{i+5} + 2 \cdot \phi - 2 \right)
-\]
+
+In conclusion, we have just shown that the \textit{score} of an infinite vertex cover game on a line (described earlier) is at least $1 + \alpha = \frac{5 - \phi}{2} \approx 1.690983$
 
 
 
-\section{Independent Set bounds}
+% \newpage
+% \section{ALSO A BREAKPOINT}
+
+
+% Further, we notice a pattern that every $i$th and $i+2$th equations look like:
+% \[
+% (sth) + 2 \cdot a_k = (k+2) \cdot \alpha
+% \]
+% \[
+% (sth) + 2 \cdot (1 - a_{k+1}) + 2 \cdot a_{k+2} = (k+4) \cdot \alpha
+% \]
+% We subtract the former from the latter and we get:
+% \[
+% a_{k+2} + 1 - a_{k+1} - a_k = \alpha 
+% \quad\quad \Rightarrow \quad\quad
+% a_{k+2} = a_{k+1} + a_k + (\alpha - 1)
+% \]
+% Calculating first few terms to notice the pattern:
+% \[
+% a_0 = 1 \cdot (a_0) + 0 \cdot (a_1) + 0 \cdot (\alpha - 1)
+% \]
+% \[
+% a_1 = 0 \cdot (a_0) + 1 \cdot (a_1) + 0 \cdot (\alpha - 1)
+% \]
+% \[
+% a_2 = 1 \cdot (a_0) + 1 \cdot (a_1) + 1 \cdot (\alpha - 1)
+% \]
+% \[
+% a_3 = 1 \cdot (a_0) + 2 \cdot (a_1) + 2 \cdot (\alpha - 1)
+% \]
+% \[
+% a_4 = 2 \cdot (a_0) + 3 \cdot (a_1) + 4 \cdot (\alpha - 1)
+% \]
+% \[
+% a_5 = 3 \cdot (a_0) + 5 \cdot (a_1) + 7 \cdot (\alpha - 1)
+% \]
+% We can spot the Fibonacci series here, which we define as $F_0 = 0$, $F_1 = 1$, $F_{i+2} = F_{i+1} + F_i$. For $i \ge 1$:
+% \[
+% a_i = F_{i-1} \cdot a_0 + F_i \cdot a_1 + (F_{i+1} - 1) \cdot (\alpha - 1)
+% \]
+% Which is obvious if you thing about it.
+% \newline\newline
+% We can now substitute $a_0$ and $a_1$ with their respective values:
+% \[
+% a_i = F_{i-1} \cdot \left( \frac{3}{2} \alpha - \frac{3}{4} \right) + F_i \cdot \left( 3 \cdot \alpha - \frac{7}{4} \right) + \left( F_{i+1} - 1 \right) \cdot \left( \alpha - 1 \right)
+% \]
+% \[
+% = \frac{1}{4} \left(
+%     \alpha \cdot \left( 6 \cdot F_{i-1} + 12 \cdot F_i + 4 \cdot F_{i+1} - 4 \right)
+%     - \left( 3 \cdot F_{i-1} + 7 \cdot F_i + 4 \cdot F_{i+1} - 4 \right)
+% \right)
+% \]
+% \[
+% = \frac{1}{4} \left(
+%     \alpha \cdot \left( 6 \cdot F_i + 10 \cdot F_{i+1} - 4 \right)
+%     - \left( 4 \cdot F_i + 7 \cdot F_{i+1} - 4 \right)
+% \right)
+% \]
+% We assumed that $\forall_i \ a_i \ge 0$, so:
+% \[
+% a_i = 
+% \frac{1}{4} \left(
+%     \alpha \cdot \left( 6 \cdot F_i + 10 \cdot F_{i+1} - 4 \right)
+%     - \left( 4 \cdot F_i + 7 \cdot F_{i+1} - 4 \right)
+% \right) \ge 0
+% \]
+% Then:
+% \[
+% \alpha \ge \frac{4 \cdot F_i + 7 \cdot F_{i+1} - 4}{6 \cdot F_i + 10 \cdot F_{i+1} - 4}
+% \]
+% We now calculate the limit, knowing that $\underset{i \rightarrow \infty}{lim} \ \frac{F_{i+1}}{F_i} = \phi = \frac{1 + \sqrt{5}}{2}$:
+% \[
+% \underset{i \rightarrow \infty}{lim} \ \frac{4 \cdot F_i + 7 \cdot F_{i+1} - 4}{6 \cdot F_i + 10 \cdot F_{i+1} - 4}
+% = \underset{i \rightarrow \infty}{lim} \ \frac{4 + 7 \cdot \frac{F_{i+1}}{F_i} - \frac{4}{F_i}}{6 + 10 \cdot \frac{F_{i+1}}{F_i} - \frac{4}{F_i}}
+% = \frac{4 + 7 \cdot \phi}{6 + 10 \cdot \phi}
+% = \frac{5 - \sqrt{5}}{4}
+% = \frac{3 - \phi}{2}
+% \]
+% We again drop the inequality to get $\alpha = \frac{3 - \phi}{2}$. From this we calculate:
+% \[
+% a_0 = \frac{3}{2} \alpha - \frac{3}{4} = \frac{6 - 3 \cdot \phi}{4}
+% \]
+% \[
+% a_1 = 3 \cdot \alpha - \frac{7}{4} = \frac{11 - 6 \cdot \phi}{4}
+% \]
+% We now substitute those to our general formula for $a_i$ and get:
+% \[
+% a_i = F_{i-1} \cdot \frac{6 - 3 \cdot \phi}{4} + F_i \cdot \frac{11 - 6 \cdot \phi}{4} + (F_{i+1} - 1) \cdot (\frac{3 - \phi}{2} - 1)
+% \]
+% ...TODO...
+% \[
+% a_i = \frac{1}{4} \left( F_{i+6} - \phi \cdot F_{i+5} + 2 \cdot \phi - 2 \right)
+% \]
+
+
+
 
 \end{document}
