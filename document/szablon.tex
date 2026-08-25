@@ -6,19 +6,32 @@
 \usepackage{amssymb}
 \usepackage{xcolor}
 \geometry{margin=1in}
-% \title{Fractional Vertex Cover Online on Trees}
-\title{\textbf{DRAFT} Fractional Vertex Cover Online on Trees}
-\author{Bartosz Bromblik}
-\date{}
+\title{Fractional Vertex Cover Online on Trees}
+% \title{\textbf{DRAFT} Fractional Vertex Cover Online on Trees}
+\author{
+    Author: Bartosz Bromblik \\
+    Advisor: dr. Grzegorz Gutowski
+}
+\date{Kraków, Poland \\ September 2026}
 \begin{document}
 \maketitle
 
 
 
 \section*{Abstract}
+In this paper, we study fractional online cover problems on trees. In online fractional vertex cover problem we improve$^{[1]}$ the lower bound to $\frac{3 - \phi}{2}$. We describing methods used to find it with (brute force) linear programming. We also provide a direct proof of the achieved lower bound, as a template for future work.
+\newline
+We also consider the online fractional independent set problem and establish lower and upper bounds of $\frac{1}{2}$ and $\frac{3}{4}$, respectively.
+\bigskip
+\bigskip
+\bigskip
+
+
+\tableofcontents
 
 
 
+\newpage
 \section{Introduction}
 In classic vertex cover problem each vertex of the graph is either included in \textit{the set} or not, which can also be expressed as giving each vertex a \textit{value} of $1$ or $0$, respectively. Then, problem requirements are set as $|v| + |u| \ge 1$ for each edge $(u, v)$. In fractional covering we use a less strict requirement, namely that each value is a real number in range $[0, 1]$. Inequalities are stated alike.
 
@@ -101,7 +114,7 @@ We chose to investigate and solve the linear programming problem by hand, as the
 \paragraph{Description}
 Instead of focusing on the \textit{score} as in $|S| + \sum_{v_i \not \in S} \ v_i^{(t)} \le |S| \cdot score$, we use $\alpha = score - 1$. Then we ask about $\sum_{v_i \not \in S} \ v_i^{(t)} \le |S| \cdot \alpha$.
 
-We will only consider inequalities (as in 2.2) after even number of turns, which is a less strict requirement, but sufficient for our analysis.
+We will only consider inequalities (as above) after even number of turns, which is a less strict requirement, but sufficient for our analysis.
 
 For the first three vertices $v_0$, $v_1$ and $v_2$ with edges $(v_0, v_1)$ in turn $1$ and $(v_1, v_2)$ in turn $2$ we assign variables:
 \begin{itemize}
@@ -247,9 +260,33 @@ Now we calculate the limit of that fraction, knowing that $\underset{i \rightarr
 = \frac{3 - \phi}{2}
 \]
 
-In conclusion, we have just shown that the \textit{score} of an infinite vertex cover game on a line (described earlier) is at least $1 + \alpha = \frac{5 - \phi}{2} \approx 1.690983$
+In conclusion, we have just shown that the \textit{score} of an infinite vertex cover game on a line (described earlier) is at least $1 + \alpha = \frac{5 - \phi}{2} \approx \textbf{1.690983}$
 
 
+
+\section{Independent Set}
+Vertex Cover and Independent Set are opposites of each other. Online problem on the former exhibits non-trivial behavio. Therefore, maybe the latter is also interesting. As a starting point, we provide both bounds to Independent Set problem, defined similarly to Vertex Cover above.
+
+\paragraph{Lower bound}
+By that we mean the highest (known) \textit{score} such that there exists an algorithm that always achieves a score of at least that much.
+
+Simple answer is $\frac{1}{2}$. We just assign $\frac{1}{2}$ to each vertex, getting a total sum of $\frac{n}{2}$ for $n$ vertices, which is a half of the maximum of $n$ (or $n-1$ if $n > 1$).
+
+
+\paragraph{Upper bound}
+By that we mean the lowest (known) \textit{score} such taht there exists an adversary against which no algorithm can get a score higher than that much.
+
+Here, the value is $\frac{3}{4}$. The tree is just two edges with one common vertex, with an equivalent of Symmetry Breaking. If the first edge has vertices of values $x$ and $y$, $x + y \le 1$ and $x \le y$, we attach an edge to the vertex with value $y$. Then, we get $y + z \le 1$, where $z$ is the value of the third vertex. Now, $x \le \frac{1}{2}$, so the total value of all vertices is $x + y + z \le \frac{3}{2}$. And the optimal independent set has a value of $2$. Therefore the score is $\frac{3}{4}$.
+
+
+
+\section{Open problems}
+One of the goals of this paper is to describe tools that can be used to further improve bounds on Online Fractional Vertex Cover and Independent Set. Most likely none of the bounds found above are perfect, but we hope those methods will help change those values.
+
+
+
+\section*{References}
+[1] Katarzyna Kępińska, Online Fractional Vertex Cover with Edge Arrivals
 
 % \newpage
 % \section{ALSO A BREAKPOINT}

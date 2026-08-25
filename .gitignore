@@ -13,3 +13,4 @@ result.out
 *.fls
 *.log
 *.synctex.gz
+*.toc
